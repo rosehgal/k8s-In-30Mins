@@ -79,11 +79,15 @@ This is not exclusive guide to learn Kubernetes from scratch, rahter this is jus
       }
     }
     ```
-1. Start the Kubernetes cluster.
+1. Start the Kubernetes cluster master node.
     ```bash
     # This will spin up Kubernetes cluster with CIDR: 10.244.0.0/16
     root@vagrant:/home/vagrant# kubeadm init --pod-network-cidr=10.244.0.0/16
     kubeadm join 10.0.2.15:6443 --token 3m5dsc.toup1iv7670ya7wc --discovery-token-ca-cert-hash sha256:73f4983d43f9618522eaccf014205f969e3bacd76c98dd0c
+
+    root@vagrant:/home/vagrant# mkdir -p $HOME/.kube
+    root@vagrant:/home/vagrant# sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+    root@vagrant:/home/vagrant# sudo chown $(id -u):$(id -g) $HOME/.kube/config
     ```
 1. Conenct other VM to this cluster: Not required in case of single VM cluster. For this run perfectly, make sure:
     - VM to VM connectivity is there.
@@ -91,11 +95,26 @@ This is not exclusive guide to learn Kubernetes from scratch, rahter this is jus
     ```bash
     kubeadm join 10.0.2.15:6443 --token 3m5dsc.toup1iv7670ya7wc --discovery-token-ca-cert-hash sha256:73f4983d43f9618522eaccf014205f969e3bacd76c98dd0c
     ```
+1. At this point, Kubernetes is installed and cluster master is up, but still we need a agent to provision and manager network for new nodes for us, This is where [Flannel](https://github.com/coreos/flannel#flannel) comes to rescue. Install Flannel to manager docker network for pods.
+    ```bash
+    kubectl apply -f \
+        https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+    ```
+1. This step applies, if we wish to use, **our master node as worker as well**. Which is yes in our case:
+    ```
+    kubectl taint nodes $(hostname) node-role.kubernetes.io/master:NoSchedule-
+
+    # If everything goes well, you will see something like this.
+    root@vagrant:/home/vagrant# kubectl get node
+    NAME      STATUS   ROLES    AGE     VERSION
+    vagrant   Ready    master   3m40s   v1.19.2
+    ```
+
 
 > Run all the commands from root shell.
 
 
-## What are kube*
+### What are kube*
 Kubernetes runs in client server model, similar to the way the docker runs. Kubernetes server exposes kubernetes-api, and each of kubeadm, kubelet and kubectl connect with this kubernetes server api to get the task done. In the master slave model, there are two entities: 
 - Control Plane
 - Worker Nodes
