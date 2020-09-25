@@ -102,7 +102,7 @@ This is not exclusive guide to learn Kubernetes from scratch, rahter this is jus
     ```
 1. This step applies, if we wish to use, **our master node as worker as well**. Which is yes in our case:
     ```
-    kubectl taint nodes $(hostname) node-role.kubernetes.io/master:NoSchedule-
+    root@vagrant:/home/vagrant# kubectl taint nodes $(hostname) node-role.kubernetes.io/master:NoSchedule-
 
     # If everything goes well, you will see something like this.
     root@vagrant:/home/vagrant# kubectl get node
