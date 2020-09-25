@@ -17,6 +17,31 @@ Vagrant.configure("2") do |config|
   # Setting up Kubernetes
   
   config.vm.provision "shell", inline: <<-SHELL
+  sudo apt-get install \
+    apt-transport-https \
+    ca-certificates \
+    curl \
+    gnupg-agent \
+    software-properties-common
+  curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+  sudo add-apt-repository \
+     "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
+     $(lsb_release -cs) \
+     stable"
+  sudo apt-get install docker-ce docker-ce-cli containerd.io
+
+  # Verification
+  docker --version
+  # Version 19.03
+  systemctl status docker
+  # Ensure that the status is "active (running)"
+  # You may have to press q to quit
+
+  systemctl stop docker
+  systemctl start docker
+  systemctl restart docker
+
+  # Install Kubernetes
   curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
   echo "deb https://apt.kubernetes.io/ kubernetes-xenial main" > /etc/apt/sources.list.d/kubernetes.list
   sudo apt-get update

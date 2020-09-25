@@ -7,7 +7,7 @@ This is not exclusive guide to learn Kubernetes from scratch, rahter this is jus
 ## This post talks about:
 1. [**Setting up Kubernetes cluster in VM**](#Setting-up-Kubernetes-cluster-in-VM) : 1 VM cluster
     - Spining up a virtual machine with [**Vagrant**](https://www.vagrantup.com/docs/installation) : 2GB RAM + 2CPU cores(Atleat)
-    - [Understanding](#What-are-kube*):
+    - [Understanding](#What-are-kube):
         - **kubeadm**
         - **kubelet**
         - **kubectl**
