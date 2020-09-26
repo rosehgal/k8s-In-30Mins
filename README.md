@@ -12,15 +12,15 @@ This is not exclusive guide to learn Kubernetes from scratch, rahter this is jus
         - **kubelet**
         - **kubectl**
 1. [**Kuberenetes pods**](#Kubernetes-pods): How are they different than Docker containers.
-    - Moving from Docker container to Kubernetes pods.
-1. **Kubernetes Resource**:
-    - Pods
-    - Deployment
-    - Services
-    - Replicaset
-    - Namespaces
-    - Context
-    - Config
+    - [Moving from Docker container to Kubernetes pods.](#how-to-create-a-pod)
+1. [**Kubernetes Resource**](#kubernetes-resources):
+    - [Pods](#pods)
+    - [Deployment](#deployments)
+    - [Replicaset](#replicasets)
+    - [Services](#services)
+    - [Namespaces](#namespaces)
+    - [Context](#context)
+    - [Config](#config)
 1. **Kubernetes network manager**
     - I will pick up the plugin called [Flannel](https://github.com/coreos/flannel#flannel).
 1. **Stateless Workload**
@@ -142,7 +142,7 @@ Kubernetes runs in client server model, similar to the way the docker runs. Kube
 - The unit of Kubernetes work load is called Pod. 
 
 ### How to create a pod
-You can create a simple nginx pod with following yaml spec. Save this in file name : [pod.yml](pod.yml)
+You can create a simple nginx pod with following yaml spec. Save this in file name : [pod.yml](files/pod.yml)
 ```yaml
 apiVersion: v1
 kind: Pod
@@ -241,4 +241,72 @@ root@vagrant:/home/vagrant/kubedata#
     </html>
     #
     ```
+
+## Kubernetes Resources
+
+### Pods
+- Fundamental unit of k8s cluster.
+- Abstraction for container/multiple-containers, running under single name.
+- Discussed in detail : [here](#how-to-create-a-pod)
+
+### Deployments
+- A Deployment provides declarative updates for Pods.
+- The configuration state in `yml` file, defines how the pods will run in cluster. They can specify:
+    - Replicas
+    - Resource allocation
+    - Connection with Volumes etc.
+    - We will see example once we see [replicasets](#replicasets)
+
+### Replicasets
+1. Run deployments in replicas.
+2. Create [file](files/deployment-replica.yml) with following specification.
+    ```yaml
+    apiVersion: apps/v1
+    
+    kind: Deployment
+    metadata:
+      name: nginx
+
+    spec:
+      replicas: 3
+      selector:
+        matchLabels:
+          app: nginx-app
+      template:
+        metadata:
+          labels:
+            app: nginx-app
+        spec:
+          containers:
+          - name: nginx
+            image: nginx
+    ```
+
+    Notice the difference.
+
+    ```diff
+    -- kind: Pod
+    ++ kind: Deployment
+
+    ++ spec:
+    ++  replicas: 3
+    ++  selector:
+    ++    matchLabels:
+    ++      app: nginx-app
+    ```
+3. Remove existing pods(if any) `kubectl delete pods --all`, and create deployment.
+    ```bash
+    root@vagrant:/home/vagrant/kubedata# kubectl apply -f deployment-replica.yml
+    deployment.apps/nginx created
+
+    root@vagrant:/home/vagrant/kubedata# kubectl get deployments
+    NAME    READY   UP-TO-DATE   AVAILABLE   AGE
+    nginx   0/3     3            0           7s
+    
+    root@vagrant:/home/vagrant/kubedata# kubectl get deployments -w
+    NAME    READY   UP-TO-DATE   AVAILABLE   AGE
+    nginx   1/3     3            1           14s
+    nginx   2/3     3            2           20s
+    ```
+
 
