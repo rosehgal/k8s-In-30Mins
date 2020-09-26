@@ -18,6 +18,7 @@ This is not exclusive guide to learn Kubernetes from scratch, rahter this is jus
     - [Deployment](#deployments)
     - [Replicaset](#replicasets)
     - [Services](#services)
+        - [LoadBalancer Service](#loadbalancer-service)
     - [Namespaces](#namespaces)
     - [Context](#context)
     - [Config](#config)
@@ -173,6 +174,7 @@ NAME    READY   STATUS    RESTARTS   AGE
 nginx   1/1     Running   0          43s
 root@vagrant:/home/vagrant/kubedata#
 ```
+Use : ` kubectl get pods` to get the list of all Pods.
 
 1. Running command into container, running inside Pod. `kubectl exec -it <pod_name> -c <container_name> -- <command>`
     ```
@@ -302,11 +304,223 @@ root@vagrant:/home/vagrant/kubedata#
     root@vagrant:/home/vagrant/kubedata# kubectl get deployments
     NAME    READY   UP-TO-DATE   AVAILABLE   AGE
     nginx   0/3     3            0           7s
-    
+
     root@vagrant:/home/vagrant/kubedata# kubectl get deployments -w
     NAME    READY   UP-TO-DATE   AVAILABLE   AGE
     nginx   1/3     3            1           14s
     nginx   2/3     3            2           20s
     ```
+4. Get the list of all `deployments`: `kubectl get deployments` or `kubectl get deploy`
+4. Get the list of all `replicaset` : `kubectl get replicaset` or ` kubectl get rs`
+    ```bash
+    root@vagrant:/home/vagrant/kubedata# kubectl get pods
+    NAME                    READY   STATUS    RESTARTS   AGE
+    nginx-d6ff45774-f84l8   1/1     Running   0          4m59s
+    nginx-d6ff45774-gzxfz   1/1     Running   0          4m59s
+    nginx-d6ff45774-t69mw   1/1     Running   0          4m59s
 
+    root@vagrant:/home/vagrant/kubedata# kubectl get deploy
+    NAME    READY   UP-TO-DATE   AVAILABLE   AGE
+    nginx   3/3     3            3           162m
 
+    root@vagrant:/home/vagrant/kubedata# kubectl get replicaset
+    NAME              DESIRED   CURRENT   READY   AGE
+    nginx-d6ff45774   3         3         3       162m
+
+    root@vagrant:/home/vagrant/kubedata#
+    ```
+5. Print a detailed description of the selected resources, including related resources such as events or controllers: `kubectl describe <resource_type> <resouce_name>`
+6. Get deployment configuration in `JSON` format: `kubectl get deployment nginx -o yaml`.
+
+### Services
+- Logical abstraction of Pods and policies to access them.
+- They enable loose coupling between dependent Pods. e.g
+    - Open Ports.
+    - Security Policies between Pod interaction etc.
+- Can be created independent of Pod declaration, but usually services linked to one Pod are present in same spec file.
+- Lets create a simple service to expose nginx service port to host machine. [File](files/nginx-service.yml)
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nginx-app
+  template:
+    metadata:
+      labels:
+        app: nginx-app
+    spec:
+      containers:
+      - name: nginx
+        image: nginx
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx
+spec:
+  selector:
+    app: nginx-app
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 80
+```
+- Service declaration starts by augmenting exiting deployment/pod spec with `---`.
+- Service and Pod can share same names.
+    - Each different resource must have unique amongst themselves.
+- The above service, exposes port 80 on host specified by `spec.ports.port` to port 80 of target pod specified by `spec.ports.taregtPort`
+
+```bash
+root@vagrant:/home/vagrant/kubedata# kubectl apply -f nginx-service.yml
+deployment.apps/nginx unchanged
+service/nginx created
+
+root@vagrant:/home/vagrant/kubedata#
+```
+- Once the service is created:
+    - Run : `kubectl get services` to get the list of services.
+        ```bash
+        root@vagrant:/home/vagrant/kubedata# kubectl get services
+        NAME         TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)   AGE
+        kubernetes   ClusterIP   10.96.0.1        <none>        443/TCP   2d5h
+        nginx        ClusterIP   10.104.178.240   <none>        80/TCP    49s
+        ```
+        Cluster IP is the IP interface of Pod anstraction on host. `curl` cluster IP will connect us to the Pod.
+        ```bash
+        root@vagrant:/home/vagrant/kubedata# curl 10.104.178.240
+        <!DOCTYPE html>
+        <html>
+        <head>
+        <title>Welcome to nginx!</title>
+        <style>
+            body {
+                width: 35em;
+                margin: 0 auto;
+                font-family: Tahoma, Verdana, Arial, sans-serif;
+            }
+        </style>
+        </head>
+        <body>
+        <h1>Welcome to nginx!</h1>
+        <p>If you see this page, the nginx web server is successfully installed and
+        working. Further configuration is required.</p>
+
+        <p>For online documentation and support please refer to
+        <a href="http://nginx.org/">nginx.org</a>.<br/>
+        Commercial support is available at
+        <a href="http://nginx.com/">nginx.com</a>.</p>
+
+        <p><em>Thank you for using nginx.</em></p>
+        </body>
+        </html>
+        ```
+    - Run : `kubectl get endpoints` or `kubectl get ep` to get list of exposed endpoints.
+        ```bash
+        root@vagrant:/home/vagrant/kubedata# kubectl get ep
+        NAME         ENDPOINTS                                    AGE
+        kubernetes   10.0.2.15:6443                               2d5h
+        nginx        10.244.0.10:80,10.244.0.8:80,10.244.0.9:80   2m
+        ```
+        Since I am running 3 different replicas, we are seeing 3 different Pod IPs.
+
+#### Loadbalancer Service
+- Notice External IP in:
+    ```bash
+    root@vagrant:/home/vagrant/kubedata# kubectl get services
+    NAME         TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)   AGE
+    kubernetes   ClusterIP   10.96.0.1        <none>        443/TCP   2d5h
+    nginx        ClusterIP   10.104.178.240   <none>        80/TCP    49s
+    ```
+- Since we are running this in local setup, we dont have any **CCM**(Cloud Config manager), which can provision external IP for us to connect to the service running inside the Pod.
+    - In case of Azure or AWS Cloud providers, the CCM provisions and links external IPs for us.
+- So lets do a **hack** here.
+    - Update nginx service to LoadBalancer. [File](files/nginx-service-lb.yml)
+        ```yaml
+        apiVersion: v1
+        kind: Service
+        metadata:
+          name: nginx
+        spec:
+          type: LoadBalancer
+          selector:
+            app: nginx-app
+          ports:
+          - protocol: TCP
+            port: 80
+            targetPort: 80
+        ```
+        Notice:
+        ```diff
+        spec:
+        ++ type: LoadBalancer
+        ```
+    - Apply the config:  `kubectl apply -f nginx-service-lb.yml`
+        ```bash
+        root@vagrant:/home/vagrant/kubedata# kubectl get svc
+        NAME         TYPE           CLUSTER-IP       EXTERNAL-IP   PORT(S)        AGE
+        kubernetes   ClusterIP      10.96.0.1        <none>        443/TCP        2d5h
+        nginx        LoadBalancer   10.104.178.240   <pending>     80:32643/TCP   17m
+        ```
+        Now the state is pending :) 
+    - Run `netstat -nltp`, and notice the `kube-proxy`
+        ```diff
+        ++ tcp        0      0 0.0.0.0:32643           0.0.0.0:*               LISTEN      13095/kube-proxy
+           tcp        0      0 127.0.0.1:10248         0.0.0.0:*               LISTEN      7024/kubelet
+        ++ tcp        0      0 127.0.0.1:10249         0.0.0.0:*               LISTEN      13095/kube-proxy
+        ```
+        See the magic.
+        ```bash
+        root@vagrant:/home/vagrant/kubedata# curl 0.0.0.0:32643
+        <!DOCTYPE html>
+        <html>
+        <head>
+        <title>Welcome to nginx!</title>
+        <style>
+            body {
+                width: 35em;
+                margin: 0 auto;
+                font-family: Tahoma, Verdana, Arial, sans-serif;
+            }
+        </style>
+        </head>
+        <body>
+        <h1>Welcome to nginx!</h1>
+        <p>If you see this page, the nginx web server is successfully installed and
+        working. Further configuration is required.</p>
+
+        <p>For online documentation and support please refer to
+        <a href="http://nginx.org/">nginx.org</a>.<br/>
+        Commercial support is available at
+        <a href="http://nginx.com/">nginx.com</a>.</p>
+
+        <p><em>Thank you for using nginx.</em></p>
+        </body>
+        </html>
+        ```
+        - The `LoadBalancer` exposed the service endpoints out of Kubernetes cluster IP interface and in our vagrant host we can access it now directly :) 
+        - The next challenge to to expose this `kube-proxy` interface to host machine. And hack is done, then we can access the service running in Pod(replica set deployment) from our host interface directly.
+        - This is how the network now looks like. The port `32643` is not exposed through kube-proxy over host/control-plane node.
+            ```bash
+                                                              Kubernetes Cluster
+                                               +---------------------------------------------+
+                                               |                               POD           |
+                                               |                           +---------+       |
+                                               |                    +------>  NGINX  |       |
+                                               |                    |      +---------+       |
+                                               |           LB       |                        |
+                         +--------------+      |    +---------------+          POD           |
+            0.0.0.0:32643|  Kube Proxy  |80    |    |               |      +---------+       |
+                    <------------------>----------->+    SERVICE    +------>  NGINX  |       |
+                         |              |      |  80|               |      +---------+       |
+                         +--------------+      |    +---------------+                        |
+                               HOST            |                    |          POD           |
+                                               |                    |      +---------+       |
+                                               |                    +------>  NGINX  |       |
+                                               |                           +---------+       |
+                                               +---------------------------------------------+
+            ```
