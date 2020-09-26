@@ -11,7 +11,7 @@ This is not exclusive guide to learn Kubernetes from scratch, rahter this is jus
         - **kubeadm**
         - **kubelet**
         - **kubectl**
-1. **Kuberenetes pods**: How are they different than Docker containers.
+1. [**Kuberenetes pods**](#Kubernetes-pods): How are they different than Docker containers.
     - Moving from Docker container to Kubernetes pods.
 1. **Kubernetes Resource**:
     - Pods
@@ -133,3 +133,112 @@ Kubernetes runs in client server model, similar to the way the docker runs. Kube
     - Runs in Worker nodes.
     - Runs task over worker nodes.
     - Maintain Pod lifecycle. Not just for pods, but all Kubernetes resources lifecycle.
+
+## Kubernetes pods
+
+- Pods run multiple containers.
+- Pods abstract out multilpe containers into single unit.
+- If two service in pods are both exposing service on same port, the other one wont spin up and it will fail.
+- The unit of Kubernetes work load is called Pod. 
+
+### How to create a pod
+You can create a simple nginx pod with following yaml spec. Save this in file name : [pod.yml](pod.yml)
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx
+spec:
+  containers:
+  - name: nginx
+    image: nginx
+```
+|Key name| Key Description|
+|---|---|
+|`apiVersion`|Kubernetes server API|  
+|`kind`|Kubernetes Resource type: `Pod`|  
+|`metadata.name`|Name of Kubernetes Pod|
+|`spec.container.name`|Name of Container which will run in a Pod|
+|`spec.container.name`|Name of docker image to run| 
+
+Run this Pod spec with. `kubectl apply -f pod.yml`
+```bash
+root@vagrant:/home/vagrant/kubedata# kubectl apply -f pod.yaml
+pod/nginx created
+
+# If everything goes OK, you will se something like this.
+
+root@vagrant:/home/vagrant/kubedata# kubectl get pods
+NAME    READY   STATUS    RESTARTS   AGE
+nginx   1/1     Running   0          43s
+root@vagrant:/home/vagrant/kubedata#
+```
+
+1. Running command into container, running inside Pod. `kubectl exec -it <pod_name> -c <container_name> -- <command>`
+    ```
+    root@vagrant:/home/vagrant/kubedata# kubectl exec -it nginx -c nginx -- whoami
+    root
+
+    root@vagrant:/home/vagrant/kubedata# kubectl exec -it nginx -c nginx -- /bin/sh
+    # cat /etc/*-release
+    PRETTY_NAME="Debian GNU/Linux 10 (buster)"
+    NAME="Debian GNU/Linux"
+    VERSION_ID="10"
+    VERSION="10 (buster)"
+    VERSION_CODENAME=buster
+    ID=debian
+    HOME_URL="https://www.debian.org/"
+    SUPPORT_URL="https://www.debian.org/support"
+    BUG_REPORT_URL="https://bugs.debian.org/"
+    ```
+1. Running multiple container in one pod.
+    ```yaml
+    apiVersion: v1
+    kind: Pod
+    metadata:
+      name: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx
+      - name: curl
+        image: appropriate/curl
+        stdin: true
+        tty: true
+        command: ["/bin/sh"]
+    ```
+    Save this into [pod-with-two-containers.yml](files/pod-with-two-containers.yml).  
+    Run this : `kubectl apply -f pod-with-two-containers.yml`
+1. Delete a running pod. `kubectl delete -f pod-with-two-containers.yml`. This will remove the pod mentioned in spec file.
+1. Container in a Pod can connect to another container in same pod with `spec.containers.name`.
+    ```bash
+    root@vagrant:/home/vagrant/kubedata# kubectl exec -it nginx -c curl -- /bin/sh
+    # curl nginx
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <title>Welcome to nginx!</title>
+    <style>
+        body {
+            width: 35em;
+            margin: 0 auto;
+            font-family: Tahoma, Verdana, Arial, sans-serif;
+        }
+    </style>
+    </head>
+    <body>
+    <h1>Welcome to nginx!</h1>
+    <p>If you see this page, the nginx web server is successfully installed and
+    working. Further configuration is required.</p>
+
+    <p>For online documentation and support please refer to
+    <a href="http://nginx.org/">nginx.org</a>.<br/>
+    Commercial support is available at
+    <a href="http://nginx.com/">nginx.com</a>.</p>
+
+    <p><em>Thank you for using nginx.</em></p>
+    </body>
+    </html>
+    #
+    ```
+
