@@ -2,9 +2,14 @@
 </p>
 
 # K8s in 30 mins
-This is not exclusive guide to learn Kubernetes from scratch, rahter this is just a small guide to quickly start with Kubernetes and deploy a very simple application on single workload VM.
+This is not a comprehensive guide to learn Kubernetes from scratch, rahter this is just a small guide/cheat sheet to quickly setup and run application with Kubernetes and deploy a very simple application on single workload VM. This repo can be served as quick learning manual to understand kubernetes.
 
-## This post talks about:
+#### Prerequisite
+- [Linux](https://files.fosswire.com/2007/08/fwunixref.pdf)
+- [Dockers](https://docs.docker.com/develop/)
+- [YAML](https://docs.ansible.com/ansible/latest/reference_appendices/YAMLSyntax.html)
+
+## Table of Contents:
 1. [**Setting up Kubernetes cluster in VM**](#Setting-up-Kubernetes-cluster-in-VM) : 1 VM cluster
     - Spining up a virtual machine with [**Vagrant**](https://www.vagrantup.com/docs/installation) : 2GB RAM + 2CPU cores(Atleat)
     - [Understanding](#What-are-kube):
