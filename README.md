@@ -19,12 +19,9 @@ This is not exclusive guide to learn Kubernetes from scratch, rahter this is jus
     - [Replicaset](#replicasets)
     - [Services](#services)
         - [LoadBalancer Service](#loadbalancer-service)
-    - [Namespaces](#namespaces)
-    - [Context](#context)
-    - [Config](#config)
-1. **Kubernetes network manager**
+1. [**Kubernetes network manager**](#kubernetes-network-manager)
     - I will pick up the plugin called [Flannel](https://github.com/coreos/flannel#flannel).
-1. **Stateless Workload**
+1. [**Stateless Workload**](#stateless-workloads)
     - Replicasets & Deployments
 1. **Stateful Workloads**
     - Persistent Volumes
@@ -33,10 +30,10 @@ This is not exclusive guide to learn Kubernetes from scratch, rahter this is jus
     - Java app deployment with Mysql PV & PVC.
     - Setting up LB service to connect to Springboot application.
         - A short discussion about Cloud Config Manager(CCM)
-1. **Understanding**:
-    - Namespaces
-    - Context
-    - Config
+1. [**Understanding** advance kubernetes resources](#advance-kubernetes-resources):
+    - [Namespaces](#namespaces)
+    - [Context](#context)
+    - [Config](#config)
 1. **Next steps**
 
 
@@ -524,3 +521,9 @@ root@vagrant:/home/vagrant/kubedata#
                                                |                           +---------+       |
                                                +---------------------------------------------+
             ```
+
+## Stateless workloads
+- Deployments and Replicasets that we had deployed so far are stateless workloads.
+- There is no state related information stored at Pods/Service, so request from kube-proxy via serivce resource can be routed to any of the Pod in the cluster.
+- This constitutes stateless workload.
+- Next section is to create a Stateful workload.
