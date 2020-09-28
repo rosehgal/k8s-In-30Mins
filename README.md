@@ -2,7 +2,7 @@
 </p>
 
 # K8s in 30 mins
-This is not a comprehensive guide to learn Kubernetes from scratch, rahter this is just a small guide/cheat sheet to quickly setup and run application with Kubernetes and deploy a very simple application on single workload VM. This repo can be served as quick learning manual to understand kubernetes.
+This is not a comprehensive guide to learn Kubernetes from scratch, rather this is just a small guide/cheat sheet to quickly setup and run application with Kubernetes and deploy a very simple application on single workload VM. This repo can be served as quick learning manual to understand kubernetes.
 
 #### Prerequisite
 - [Linux](https://files.fosswire.com/2007/08/fwunixref.pdf)
@@ -28,13 +28,12 @@ This is not a comprehensive guide to learn Kubernetes from scratch, rahter this 
     - I will pick up the plugin called [Flannel](https://github.com/coreos/flannel#flannel).
 1. [**Stateless Workload**](#stateless-workloads)
     - Replicasets & Deployments
-1. **Stateful Workloads**
-    - Persistent Volumes
-    - Persistent Volume Claims
+1. [**Stateful Workloads**](#stateful-workloads)
+    - [Persistent Volumes](#persistent-volumes)
+    - [Persistent Volume Claims](#persistent-volume-claims)
 1. **Deploying a simple Java sprinboot app in kubernetes cluster**
     - Java app deployment with Mysql PV & PVC.
     - Setting up LB service to connect to Springboot application.
-        - A short discussion about Cloud Config Manager(CCM)
 1. [**Understanding** advance kubernetes resources](#advance-kubernetes-resources):
     - [Namespaces](#namespaces)
     - [Context](#context)
@@ -532,3 +531,149 @@ root@vagrant:/home/vagrant/kubedata#
 - There is no state related information stored at Pods/Service, so request from kube-proxy via serivce resource can be routed to any of the Pod in the cluster.
 - This constitutes stateless workload.
 - Next section is to create a Stateful workload.
+
+## Stateful workloads
+- Preserve the state of data present on Pods.
+- Two situations can be possible:
+    - Multi pod stateful workload
+        - If multiple pods are connecting to stateful workload, there should be worker based synchronization
+        - Else, stateful data may go out of sync.
+    - Single pod stateful workload
+        - Create persitant volumes
+        - Create persitant volume claims to access persitant volumes in a synchronized way, just to prevent ensure data atomicity.
+
+### Persistent Volumes
+- PV are like volumes in Docker, just that their lifecycle is independent of Pods.
+- This is an API object. Captures details about storage implementation.
+- Provised by Kubernetes administrator.
+- Way to abstract storage resource.
+- Create a persistent volume for MySQL server. [File](files/pv.yml)
+    ```yaml
+    kind: PersistentVolume
+    apiVersion: v1
+    metadata:
+      name: pv
+      labels:
+        type: local
+    spec:
+      storageClassName: manual
+      capacity:
+        storage: 5Gi
+      accessModes:
+        - ReadWriteOnce
+      hostPath:
+        path: "/data"
+    ```
+    This spec specifies the volume is at `/data` on cluster's node.
+    Apply it : `kubectl apply -f pv.yml`
+    ```bash
+    root@vagrant:/home/vagrant/kubedata# kubectl get pv
+    NAME   CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS      CLAIM   STORAGECLASS   REASON   AGE
+    pv     5Gi        RWO            Retain           Available           manual                  62s
+    ```
+
+
+### Persistent Volume Claims
+- Storage requeest by a user.
+- PVCs consume PV resources.
+- Way to access abstract storage.
+- PVC can request specific size and access mode: `ReadWriteOnce`, `ReadOnlyMany`, `ReadWriteMany`
+
+|Access Mode| Meaning|
+|---|---|
+|ReadWriteOnce | volume can be mounted as read-write by a single node|
+|ReadOnlyMany |  volume can be mounted read-only by many nodes|
+|ReadWriteMany | volume can be mounted as read-write by many nodes|
+
+- Create a PVC spec. [File](files/pvc.yml)
+    ```yaml
+    kind: PersistentVolumeClaim
+    apiVersion: v1
+    metadata:
+      name: pv-claim
+    spec:
+      storageClassName: manual
+      accessModes:
+        - ReadWriteOnce
+      resources:
+        requests:
+          storage: 1Gi
+    ```
+    Apply it.
+    ```bash
+    root@vagrant:/home/vagrant/kubedata# kubectl apply -f pv-claim.yml
+    persistentvolumeclaim/pv-claim created
+
+    root@vagrant:/home/vagrant/kubedata# kubectl get pvc
+    NAME       STATUS   VOLUME   CAPACITY   ACCESS MODES   STORAGECLASS   AGE
+    pv-claim   Bound    pv       5Gi        RWO            manual         8s
+
+    root@vagrant:/home/vagrant/kubedata# kubectl describe pvc pv-claim
+    Name:          pv-claim
+    Namespace:     default
+    StorageClass:  manual
+    Status:        Bound
+    Volume:        pv
+    Labels:        <none>
+    Annotations:   pv.kubernetes.io/bind-completed: yes
+                   pv.kubernetes.io/bound-by-controller: yes
+    Finalizers:    [kubernetes.io/pvc-protection]
+    Capacity:      5Gi
+    Access Modes:  RWO
+    VolumeMode:    Filesystem
+    Mounted By:    <none>
+    Events:        <none>
+    root@vagrant:/home/vagrant/kubedata#
+    ```
+    - Pods use PersistentVolumeClaims to request physical storage
+    - After creating the PersistentVolumeClaim, the Kubernetes control plane looks for a PersistentVolume that satisfies the claim's requirements. If the control plane finds a suitable PersistentVolume with the same StorageClass, it binds the claim to the volume.
+
+- Lets create a POD which will use PV as Volume using PVC. [File](files/nginx-pod-with-pv.yml)
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-pod-with-pvc
+spec:
+  volumes:
+    - name: nginx-pv-storage
+      persistentVolumeClaim:
+        claimName: pv-claim
+  containers:
+    - name: nginx-with-pv
+      image: nginx
+      volumeMounts:
+        - mountPath: "/usr/share/nginx/html"
+          name: nginx-pv-storage
+```
+```bash
+root@vagrant:/home/vagrant/kubedata# kubectl get pods nginx-pod-with-pvc
+NAME                 READY   STATUS    RESTARTS   AGE
+nginx-pod-with-pvc   1/1     Running   0          16s
+
+root@vagrant:/home/vagrant/kubedata# kubectl exec -it nginx-pod-with-pvc -c nginx-with-pv -- /bin/bash
+root@nginx-pod-with-pvc:/# curl localhost
+Hi PV
+
+```
+- The file we just created in storage is made accessible to Nginx POD.
+
+
+### Summary
+```
+                                +--------------------------------------+
+                                |     +------------+                   |
+                                |     |    POD     |        +--------------->
+                                |     +-----+------+        |          |    |
+                                |           |               |          |    |
+                                |           |         +-----+------+   |    v
+                                |           |         |     PV     |   |   /data
+                                |           |         +------+-----+   |
+                                |     +-----v------+         ^         |
+                                |     |    PVC     +---------+         |
+                                |     +------------+                   |
+                                |                                      |
+                                +--------------------------------------+
+```
+- PV to PVC bind is automatic, based on storage class.
+- Pod/Deployment/K8s-Resource has to be done manually.
