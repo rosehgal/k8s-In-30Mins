@@ -1,0 +1,111 @@
+kind: PersistentVolume
+apiVersion: v1
+metadata:
+  name: mysql-pv
+  labels:
+    type: local
+spec:
+  storageClassName: manual
+  capacity:
+      storage: 5Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/data/mysql"   
+
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: mysql-pvc
+spec:
+  storageClassName: manual
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+
+---
+apiVersion: apps/v1 
+kind: Deployment
+metadata:
+  name: dbserver
+  labels:
+    app: dbserver
+spec:
+  selector:
+    matchLabels:
+      app: dbserver
+  template:
+    metadata:
+      labels:
+        app: dbserver
+    spec:
+      containers:
+      - image: mysql
+        name: mysql
+        imagePullPolicy: Never
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          value: mysecretpassword
+        ports:
+        - containerPort: 3306
+          name: dbserver
+        volumeMounts:
+        - name: mysql-persistent-storage
+          mountPath: /var/lib/mysql
+      volumes:
+      - name: mysql-persistent-storage
+        persistentVolumeClaim:
+          claimName: mysql-pvc
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dbservice
+spec:
+  selector:
+    app: dbserver
+  ports:
+  - protocol: TCP
+    port: 3306
+    targetPort: 3306
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: appserver
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: appserver
+  template:
+    metadata:
+      labels:
+        app: appserver
+    spec:
+      containers:
+      - name: appserver
+        image: appserver
+        imagePullPolicy: Never
+        env:
+        - name: DB_HOST
+          value: dbservice
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: contacts
+spec:
+  type: LoadBalancer
+  selector:
+    app: appserver
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 8080

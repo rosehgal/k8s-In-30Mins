@@ -10,7 +10,7 @@ This is not a comprehensive guide to learn Kubernetes from scratch, rather this 
 - [YAML](https://docs.ansible.com/ansible/latest/reference_appendices/YAMLSyntax.html)
 
 ## Table of Contents:
-1. [**Setting up Kubernetes cluster in VM**](#Setting-up-Kubernetes-cluster-in-VM) : 1 VM cluster
+1. [**Setting up Kubernetes cluster in VM (NOT MINIKUBE)**](#Setting-up-Kubernetes-cluster-in-VM) : 1 VM cluster
     - Spining up a virtual machine with [**Vagrant**](https://www.vagrantup.com/docs/installation) : 2GB RAM + 2CPU cores(Atleat)
     - [Understanding](#What-are-kube):
         - **kubeadm**
@@ -31,14 +31,27 @@ This is not a comprehensive guide to learn Kubernetes from scratch, rather this 
 1. [**Stateful Workloads**](#stateful-workloads)
     - [Persistent Volumes](#persistent-volumes)
     - [Persistent Volume Claims](#persistent-volume-claims)
-1. **Deploying a simple Java sprinboot app in kubernetes cluster**
-    - Java app deployment with Mysql PV & PVC.
-    - Setting up LB service to connect to Springboot application.
+1. [**Deploying End-to-End Service in Kubernetes cluster**](#sample-application-example)
+    - MySQL:
+        - [PV](#mysql-pv)
+        - [PVC](#mysql-pvc)
+    - Sprinboot Application:
+        - Stateless Workload
+            - Custom Docker Image
+        - Replica based Deployment
+        - Linking with PVC
+    - Service Resource
+        - Access Springboot Service outside Pods
+        - Kubernetes Resource Load Balancer
+    - Infrastructure as a Code 
+        - Full Spec
 1. [**Understanding** advance kubernetes resources](#advance-kubernetes-resources):
     - [Namespaces](#namespaces)
     - [Context](#context)
     - [Config](#config)
+1. [**Cheat sheet**](#cheat-sheet)
 1. **Next steps**
+
 
 
 ## Setting up Kubernetes cluster in VM
@@ -676,4 +689,263 @@ Hi PV
                                 +--------------------------------------+
 ```
 - PV to PVC bind is automatic, based on storage class.
-- Pod/Deployment/K8s-Resource has to be done manually.
+- Pod/Deployment/K8s-Resource link to PVC has to has to be done manually in spec file.
+
+## Sample Application Example
+1. This End to End setup will include:
+  1. MySQL setup through PV and PVC.
+  2. Building Custom Dockerfile for sprinboot application.
+  3. Creating Deployment for SpringBoot application.
+    1. Setup the environment for application to connect to DB.
+    2. Setting up PVC setup in deployment.
+    3. Creating Serivce for springboot application access outside pod.
+      1. Service setup through LB
+
+Once we create spec.yml in bits, we will create a big spec to show our Infrastructure as a Code and deploy that :smile:.
+
+### Step 1: Create PV for MYSQL DB
+```yaml
+kind: PersistentVolume
+apiVersion: v1
+metadata:
+  name: mysql-pv
+  labels:
+    type: local
+spec:
+  storageClassName: manual
+  capacity:
+    storage: 5Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/data/mysql"   
+```
+
+### Step 2: Create PVC for PV
+```yaml
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: mysql-pvc
+spec:
+  storageClassName: manual
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+```
+
+### Step 3: Create MySQL deployment Spec
+```yaml
+apiVersion: apps/v1 
+kind: Deployment
+metadata:
+  name: dbserver
+  labels:
+    app: dbserver
+spec:
+  selector:
+    matchLabels:
+      app: dbserver
+  template:
+    metadata:
+      labels:
+        app: dbserver
+    spec:
+      containers:
+      - image: mysql
+        name: mysql
+        imagePullPolicy: Never
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          value: mysecretpassword
+        ports:
+        - containerPort: 3306
+          name: dbserver
+        volumeMounts:
+        - name: mysql-persistent-storage
+          mountPath: /var/lib/mysql
+      volumes:
+      - name: mysql-persistent-storage
+        persistentVolumeClaim:
+          claimName: mysql-pvc
+```
+  - Once the DB server is up, please go adhead and login to MySQL and create `peopledb` for sprinboot application to access.
+    - `mysql  -- mysql -u root -pmysecretpassword` & `create database peopledb`
+
+### Expose MySQL server via Service
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: dbservice
+spec:
+  selector:
+    app: dbserver
+  ports:
+  - protocol: TCP
+    port: 3306
+    targetPort: 3306
+```
+- This will expose this service over/inside cluster for other services to access.
+
+### Build and Deploy AppServer
+- Build the Docker image with name `appserver` from this [File][files/Dockerfile].
+- Create Deployment spec for appserver.
+  ```yaml
+  apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    name: appserver
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        app: appserver
+    template:
+      metadata:
+        labels:
+          app: appserver
+      spec:
+        containers:
+        - name: appserver
+          image: appserver
+          imagePullPolicy: Never
+          env:
+          - name: DB_HOST
+            value: dbservice
+  ```
+
+### Expose AppServer service via Service type LB to host.
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: contacts
+spec:
+  type: LoadBalancer
+  selector:
+    app: appserver
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 8080
+```
+
+### Full Spec
+- [File](files/full-stack-spec.yml)
+```yaml
+kind: PersistentVolume
+apiVersion: v1
+metadata:
+  name: mysql-pv
+  labels:
+    type: local
+spec:
+  storageClassName: manual
+  capacity:
+      storage: 5Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/data/mysql"   
+
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: mysql-pvc
+spec:
+  storageClassName: manual
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+
+---
+apiVersion: apps/v1 
+kind: Deployment
+metadata:
+  name: dbserver
+  labels:
+    app: dbserver
+spec:
+  selector:
+    matchLabels:
+      app: dbserver
+  template:
+    metadata:
+      labels:
+        app: dbserver
+    spec:
+      containers:
+      - image: mysql
+        name: mysql
+        imagePullPolicy: Never
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          value: mysecretpassword
+        ports:
+        - containerPort: 3306
+          name: dbserver
+        volumeMounts:
+        - name: mysql-persistent-storage
+          mountPath: /var/lib/mysql
+      volumes:
+      - name: mysql-persistent-storage
+        persistentVolumeClaim:
+          claimName: mysql-pvc
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dbservice
+spec:
+  selector:
+    app: dbserver
+  ports:
+  - protocol: TCP
+    port: 3306
+    targetPort: 3306
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: appserver
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: appserver
+  template:
+    metadata:
+      labels:
+        app: appserver
+    spec:
+      containers:
+      - name: appserver
+        image: appserver
+        imagePullPolicy: Never
+        env:
+        - name: DB_HOST
+          value: dbservice
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: contacts
+spec:
+  type: LoadBalancer
+  selector:
+    app: appserver
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 8080
+```
+- `kuebctl apply -f full-stack-spec.yml` :smile:
