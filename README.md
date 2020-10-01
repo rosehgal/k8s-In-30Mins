@@ -791,7 +791,7 @@ spec:
 - This will expose this service over/inside cluster for other services to access.
 
 ### Build and Deploy AppServer
-- Build the Docker image with name `appserver` from this [File][files/Dockerfile].
+- Build the Docker image with name `appserver` from this [File](files/Dockerfile).
 - Create Deployment spec for appserver.
   ```yaml
   apiVersion: apps/v1
