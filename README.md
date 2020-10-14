@@ -905,12 +905,7 @@ spec:
         - name: mysql-persistent-storage
           persistentVolumeClaim:
             claimName: mysql-pvc
-  ```
-- `kuebctl apply -f mysql-spec.yml` :smile:
-
-#### AppServer Full Spec
-- You can find the full spec file here: [File](files/appserver-spec.yml)
-  ```yaml
+  ---
   apiVersion: v1
   kind: Service
   metadata:
@@ -922,8 +917,13 @@ spec:
     - protocol: TCP
       port: 3306
       targetPort: 3306
+  ```
+- `kuebctl apply -f mysql-spec.yml` :smile:
 
-  ---
+#### AppServer Full Spec
+- You can find the full spec file here: [File](files/appserver-spec.yml)
+  ```yaml
+
   apiVersion: apps/v1
   kind: Deployment
   metadata:
