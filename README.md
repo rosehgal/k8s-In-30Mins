@@ -1,8 +1,8 @@
 <p align="center">
-<img src="files/static/k8logo.png" />
-<img src="files/static/in.png" height="60%" width="60%" />
-
-<br/><br/>
+<img src="files/static/k8logo.png" height="30%" width="30%" />
+<br>
+<img src="files/static/in.png" height="30%" width="30%" />
+<br>
 <img alt="GitHub release (latest by date)" src="https://img.shields.io/github/v/release/r0hi7/k8s-In-30Mins">
 <img alt="GitHub code size in bytes" src="https://img.shields.io/github/languages/code-size/r0hi7/k8s-In-30Mins">
 <img alt="GitHub" src="https://img.shields.io/github/license/r0hi7/k8s-In-30Mins">
@@ -12,9 +12,7 @@
 <img alt="Twitter Follow" src="https://img.shields.io/twitter/follow/sehgal_rohit?style=social">
 <img alt="GitHub followers" src="https://img.shields.io/github/followers/r0hi7?style=social">
 <br>
-<br>
 <a target="_blank" href="https://twitter.com/intent/tweet?text=Learn Kubernetes in 30 mins, with single node cluster @sehgal_rohit. https://github.com/r0hi7/k8s-In-30Mins" title="Share on Twitter"><img src="https://img.shields.io/twitter/url/http/shields.io.svg?style=social&label=Share%20on%20Twitter"></a>
-
 </p>
 
 # K8s in 30 mins
