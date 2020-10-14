@@ -32,19 +32,19 @@ This is not a comprehensive guide to learn Kubernetes from scratch, rather this 
     - [Persistent Volumes](#persistent-volumes)
     - [Persistent Volume Claims](#persistent-volume-claims)
 1. [**Deploying End-to-End Service in Kubernetes cluster**](#sample-application-example)
-    - MySQL:
-        - [PV](#mysql-pv)
-        - [PVC](#mysql-pvc)
-    - Sprinboot Application:
+    - [MySQL](#mysql-resource):
+        - [PV](#step-1-create-pv-for-mysql-db)
+        - [PVC](#step-2-create-pvc-for-pv)
+        - [Deployment](#step-3-create-mysql-deployment-spec)
+        - [Service](#step-4-expose-mysql-server-via-service)
+    - [Sprinboot Application](#springboot-application):
         - Stateless Workload
-            - Custom Docker Image
-        - Replica based Deployment
-        - Linking with PVC
-    - Service Resource
-        - Access Springboot Service outside Pods
-        - Kubernetes Resource Load Balancer
-    - Infrastructure as a Code 
-        - Full Spec
+            - [Custom Docker Image](files/Dockerfile)
+        - [Replica based Deployment & link with DB Service](#step-1-build-and-deploy-appserver)
+        - [Access Springboot Service outside Pods](#step-2-expose-appserver-service-via-service-type-lb-to-host)
+    - [Infrastructure as a Code](#Infrastructure-as-a-code) 
+        - [MySQL Full Spec](#mysql-full-spec)
+        - [AppServer Full Spec](#appserver-full-spec)
 1. [**Understanding** advance kubernetes resources](#advance-kubernetes-resources):
     - [Namespaces](#namespaces)
     - [Context](#context)
@@ -703,7 +703,9 @@ Hi PV
 
 Once we create spec.yml in bits, we will create a big spec to show our Infrastructure as a Code and deploy that :smile:.
 
-### Step 1: Create PV for MYSQL DB
+### MySQL Resource
+
+#### Step 1: Create PV for MYSQL DB
 ```yaml
 kind: PersistentVolume
 apiVersion: v1
@@ -721,7 +723,7 @@ spec:
     path: "/data/mysql"   
 ```
 
-### Step 2: Create PVC for PV
+#### Step 2: Create PVC for PV
 ```yaml
 kind: PersistentVolumeClaim
 apiVersion: v1
@@ -736,7 +738,7 @@ spec:
       storage: 1Gi
 ```
 
-### Step 3: Create MySQL deployment Spec
+#### Step 3: Create MySQL deployment Spec
 ```yaml
 apiVersion: apps/v1 
 kind: Deployment
@@ -774,7 +776,7 @@ spec:
   - Once the DB server is up, please go adhead and login to MySQL and create `peopledb` for sprinboot application to access.
     - `mysql  -- mysql -u root -pmysecretpassword` & `create database peopledb`
 
-### Expose MySQL server via Service
+#### Step 4: Expose MySQL server via Service
 ```yaml
 apiVersion: v1
 kind: Service
@@ -790,8 +792,13 @@ spec:
 ```
 - This will expose this service over/inside cluster for other services to access.
 
-### Build and Deploy AppServer
+### Springboot Application
+
+#### Step 1: Build and Deploy AppServer
 - Build the Docker image with name `appserver` from this [File](files/Dockerfile).
+  ```bash
+  docker build  -t appserver .
+  ```
 - Create Deployment spec for appserver.
   ```yaml
   apiVersion: apps/v1
@@ -817,7 +824,7 @@ spec:
             value: dbservice
   ```
 
-### Expose AppServer service via Service type LB to host.
+#### Step 2: Expose AppServer service via Service type LB to host.
 ```yaml
 apiVersion: v1
 kind: Service
@@ -833,119 +840,125 @@ spec:
     targetPort: 8080
 ```
 
-### Full Spec
-- [File](files/full-stack-spec.yml)
-```yaml
-kind: PersistentVolume
-apiVersion: v1
-metadata:
-  name: mysql-pv
-  labels:
-    type: local
-spec:
-  storageClassName: manual
-  capacity:
-      storage: 5Gi
-  accessModes:
-    - ReadWriteOnce
-  hostPath:
-    path: "/data/mysql"   
+### Infrastructure as a Code
+#### MySQL Full Spec
+- You can find the full spec file here : [File](files/mysql-spec.yml)
+  ```yaml
+  kind: PersistentVolume
+  apiVersion: v1
+  metadata:
+    name: mysql-pv
+    labels:
+      type: local
+  spec:
+    storageClassName: manual
+    capacity:
+        storage: 5Gi
+    accessModes:
+      - ReadWriteOnce
+    hostPath:
+      path: "/data/mysql"   
 
----
-kind: PersistentVolumeClaim
-apiVersion: v1
-metadata:
-  name: mysql-pvc
-spec:
-  storageClassName: manual
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 1Gi
+  ---
+  kind: PersistentVolumeClaim
+  apiVersion: v1
+  metadata:
+    name: mysql-pvc
+  spec:
+    storageClassName: manual
+    accessModes:
+      - ReadWriteOnce
+    resources:
+      requests:
+        storage: 1Gi
 
----
-apiVersion: apps/v1 
-kind: Deployment
-metadata:
-  name: dbserver
-  labels:
-    app: dbserver
-spec:
-  selector:
-    matchLabels:
+  ---
+  apiVersion: apps/v1 
+  kind: Deployment
+  metadata:
+    name: dbserver
+    labels:
       app: dbserver
-  template:
-    metadata:
-      labels:
+  spec:
+    selector:
+      matchLabels:
         app: dbserver
-    spec:
-      containers:
-      - image: mysql
-        name: mysql
-        imagePullPolicy: Never
-        env:
-        - name: MYSQL_ROOT_PASSWORD
-          value: mysecretpassword
-        ports:
-        - containerPort: 3306
-          name: dbserver
-        volumeMounts:
+    template:
+      metadata:
+        labels:
+          app: dbserver
+      spec:
+        containers:
+        - image: mysql
+          name: mysql
+          imagePullPolicy: Never
+          env:
+          - name: MYSQL_ROOT_PASSWORD
+            value: mysecretpassword
+          ports:
+          - containerPort: 3306
+            name: dbserver
+          volumeMounts:
+          - name: mysql-persistent-storage
+            mountPath: /var/lib/mysql
+        volumes:
         - name: mysql-persistent-storage
-          mountPath: /var/lib/mysql
-      volumes:
-      - name: mysql-persistent-storage
-        persistentVolumeClaim:
-          claimName: mysql-pvc
+          persistentVolumeClaim:
+            claimName: mysql-pvc
+  ```
+- `kuebctl apply -f mysql-spec.yml` :smile:
 
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: dbservice
-spec:
-  selector:
-    app: dbserver
-  ports:
-  - protocol: TCP
-    port: 3306
-    targetPort: 3306
+#### AppServer Full Spec
+- You can find the full spec file here: [File](files/appserver-spec.yml)
+  ```yaml
+  apiVersion: v1
+  kind: Service
+  metadata:
+    name: dbservice
+  spec:
+    selector:
+      app: dbserver
+    ports:
+    - protocol: TCP
+      port: 3306
+      targetPort: 3306
 
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: appserver
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: appserver
-  template:
-    metadata:
-      labels:
+  ---
+  apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    name: appserver
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
         app: appserver
-    spec:
-      containers:
-      - name: appserver
-        image: appserver
-        imagePullPolicy: Never
-        env:
-        - name: DB_HOST
-          value: dbservice
+    template:
+      metadata:
+        labels:
+          app: appserver
+      spec:
+        containers:
+        - name: appserver
+          image: appserver
+          imagePullPolicy: Never
+          env:
+          - name: DB_HOST
+            value: dbservice
 
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: contacts
-spec:
-  type: LoadBalancer
-  selector:
-    app: appserver
-  ports:
-  - protocol: TCP
-    port: 80
-    targetPort: 8080
-```
-- `kuebctl apply -f full-stack-spec.yml` :smile:
+  ---
+  apiVersion: v1
+  kind: Service
+  metadata:
+    name: contacts
+  spec:
+    type: LoadBalancer
+    selector:
+      app: appserver
+    ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
+  ```
+  Quickly apply it with `kubectl apply -f appserver-spec.yml`
+
