@@ -61,10 +61,10 @@ This is not a comprehensive guide to learn Kubernetes from scratch, rather this 
         - [AppServer Full Spec](#appserver-full-spec)
 1. [**Understanding** advance kubernetes resources](#advance-kubernetes-resources):
     - [Namespaces](#namespaces)
+        - [Create Namespace and Add Resource](#creating-namespace-&-adding-resource) 
     - [Context](#context)
-    - [Config](#config)
 1. [**Cheat sheet**](#cheat-sheet)
-1. **Next steps**
+1. [**Next steps**](#next-steps)
 
 
 
@@ -976,3 +976,109 @@ spec:
   ```
   Quickly apply it with `kubectl apply -f appserver-spec.yml`
 
+
+## Understanding Advance Kubernetes Resources
+
+### Namespace
+Namespace are software level cluster virtualization over same physical k8s cluster.  
+```bash
+  root@vagrant:/home/vagrant# kubectl get ns
+  NAME              STATUS   AGE
+  default           Active   19d
+  kube-node-lease   Active   19d
+  kube-public       Active   19d
+  kube-system       Active   19d
+```
+
+Kubernetes starts with 4 namespaces:
+1. **default**: The default namespace for objects with no other namespace.
+2. **kube-system**: The namespace for objects created by the Kubernetes system.
+3. **kube-public**: This namespace is created automatically and is readable by all users (including those not **authenticated**). This namespace is mostly reserved for cluster usage, in case that some resources should be visible and readable publicly throughout the whole cluster. The public aspect of this namespace is only a convention, not a requirement.
+4. **kube-node-lease**: This namespace for the lease objects associated with each node which improves the performance of the node heartbeats as the cluster scales.
+
+Get Pods from specific namespace
+``kubectl get pods --namespace=default`` OR `kubectl get pods -n default`
+```bash
+root@vagrant:/home/vagrant# kubectl get pods --namespace=kube-system
+NAME                              READY   STATUS    RESTARTS   AGE
+coredns-f9fd979d6-g9wxg           1/1     Running   5          19d
+coredns-f9fd979d6-zrdvs           1/1     Running   5          19d
+etcd-vagrant                      1/1     Running   5          19d
+kube-apiserver-vagrant            1/1     Running   5          19d
+kube-controller-manager-vagrant   1/1     Running   7          19d
+kube-flannel-ds-64l2p              1/1     Running   6          19d
+kube-proxy-4j4kw                  1/1     Running   5          19d
+kube-scheduler-vagrant            1/1     Running   7          19d
+```
+
+#### Creating Namespace & Adding resource
+- Create namespace : `kubectl create namespace qa`
+- Once the namespace is created, just add the metadata field : `namespace: qa`, [File](files/pod-qa.yml)
+  ```diff
+  apiVersion: v1
+  kind: Pod
+  metadata:
+     name: nginx
+  ++ namespace: qa
+  spec:
+    containers:
+    - name: nginx
+      image: nginx
+  ```
+- Most Kubernetes resources (e.g. pods, services, replication controllers, and others) are in some namespaces. However namespace resources are not themselves in a namespace. And low-level resources, such as nodes and persistentVolumes, are not in any namespace.
+  - To see the list of resource not in namespace : `kubectl api-resources --namespaced=false`
+
+### Context
+- Is a tuple of **cluster**, **user**, **namespace**. This is useful when you connect to multiple clusters from one control plane.
+  - Get the current context: `kubectl config get-contexts`
+  ```bash
+  root@vagrant:/home/vagrant/kubedata# kubectl config get-contexts
+  CURRENT   NAME                          CLUSTER      AUTHINFO           NAMESPACE
+  *         kubernetes-admin@kubernetes   kubernetes   kubernetes-admin
+  ```
+- You can create kubernetes context using config file or using commands.
+  - Create a qa-config: `kubectl config set-context dev-env --cluster=kubernetes --user=new-admin --namespace=dev-env`
+    ```bash
+    root@vagrant:/home/vagrant/kubedata# kubectl config set-context dev-env --cluster=kubernetes --user=new-admin --namespace=dev-env
+    Context "dev-env" created.
+    ```
+    ```bash
+    root@vagrant:/home/vagrant/kubedata# kubectl config get-contexts
+    CURRENT   NAME                          CLUSTER      AUTHINFO           NAMESPACE
+             dev-env                       kubernetes   new-admin          dev-env
+    *          kubernetes-admin@kubernetes   kubernetes   kubernetes-admin
+    ```
+  - Now use the created context using : `kubectl config use-context dev-env`
+  - All your k8s resource will now be in DEV name space under kubernetes cluster :smile:
+    - But to create resource you will need user `new-admin` authentication. This is the user created during context creation.
+    - Create username & password for user `new-admin` to use the resource in context and create a role binding: **Run this before switching context**
+    `kubectl config set-credentials new-admin --username=adm --password=changeme`
+    ```bash
+    cat << EOF | kubectl apply -f -
+    apiVersion: rbac.authorization.k8s.io/v1
+    kind: ClusterRoleBinding
+    metadata:
+      name: new-admin
+    roleRef:
+      apiGroup: rbac.authorization.k8s.io
+      kind: ClusterRole
+      name: cluster-admin
+    subjects:
+    - apiGroup: rbac.authorization.k8s.io
+      kind: User
+      name: marry@example.com
+
+    EOF
+    ```
+
+## CheatSheet
+- I plan to write a simple cheat sheet covering the commands in this repo. But for now Try : [k8s-official-cheat-sheet](https://kubernetes.io/docs/reference/kubectl/cheatsheet/)
+
+## Next Steps
+- [In detail K8s Reference](https://kubernetes.io/docs/reference/)
+- [API Guide](https://kubernetes.io/docs/reference/)
+- [CLI Guide](https://kubernetes.io/docs/reference/)
+- [K8s Design Docs](https://kubernetes.io/docs/reference/)
+- Raising a PR makes me happy, take that as a next step.
+- Issues are more than welcome.
+- If you like it, share it.
