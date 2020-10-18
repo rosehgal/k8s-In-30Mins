@@ -15,7 +15,7 @@
 <a target="_blank" href="https://twitter.com/intent/tweet?text=Learn Kubernetes in 30 mins, with single node cluster @sehgal_rohit. https://github.com/r0hi7/k8s-In-30Mins" title="Share on Twitter"><img src="https://img.shields.io/twitter/url/http/shields.io.svg?style=social&label=Share%20on%20Twitter"></a>
 </p>
 
-[![HitCount](http://hits.dwyl.com/r0hi7/k8s-in-30Mins.svg)](http://hits.dwyl.com/r0hi7/k8s-in-30Mins)
+[![HitCount](http://hits.dwyl.com/r0hi7/k8s-In-30Mins.svg)](http://hits.dwyl.com/r0hi7/k8s-In-30Mins)
 
 
 # K8s in 30 mins
