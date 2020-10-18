@@ -13,9 +13,9 @@
 <img alt="GitHub followers" src="https://img.shields.io/github/followers/r0hi7?style=social">
 <br>
 <a target="_blank" href="https://twitter.com/intent/tweet?text=Learn Kubernetes in 30 mins, with single node cluster @sehgal_rohit. https://github.com/r0hi7/k8s-In-30Mins" title="Share on Twitter"><img src="https://img.shields.io/twitter/url/http/shields.io.svg?style=social&label=Share%20on%20Twitter"></a>
+<br>
+<img src="http://hits.dwyl.com/r0hi7/TrashEmail.svg" />
 </p>
-
-[![HitCount](http://hits.dwyl.com/r0hi7/TrashEmail.svg)](http://hits.dwyl.com/r0hi7/TrashEmail)  
 
 # K8s in 30 mins
 This is not a comprehensive guide to learn Kubernetes from scratch, rather this is just a small guide/cheat sheet to quickly setup and run application with Kubernetes and deploy a very simple application on single workload VM. This repo can be served as quick learning manual to understand kubernetes.
@@ -74,7 +74,7 @@ This is not a comprehensive guide to learn Kubernetes from scratch, rather this 
 1. Download the Vagrant [File](Vagrantfile).
 1. Download Virtual box and install from [here](https://www.virtualbox.org/).
 1. Download and install [Vagrant](https://www.vagrantup.com/downloads).
-1. In the terminal run, the two command to get the VM up and running, with out any config :smile:
+1. In the terminal, run the two command to get the VM up and running, with out any configuration :smile:
     ```bash
     # In the same directory where you have downloaded Vagrantfile, run
     vagrant up
