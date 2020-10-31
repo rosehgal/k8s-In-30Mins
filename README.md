@@ -19,7 +19,7 @@
 
 
 # K8s in 30 mins
-This is not a comprehensive guide to learn Kubernetes from scratch, rather this is just a small guide/cheat sheet to quickly setup and run applications with Kubernetes and deploy a very simple application on single workload VM. This repo can be served as quick learning manual to understand kubernetes.
+This is not a comprehensive guide to learn Kubernetes from scratch, rather this is just a small guide/cheat sheet to quickly setup and run applications with Kubernetes and deploy a very simple application on single workload VM. This repo can be served as quick learning manual to understand Kubernetes.
 
 #### Prerequisite
 - [Linux](https://files.fosswire.com/2007/08/fwunixref.pdf)
