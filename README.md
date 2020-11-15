@@ -15,8 +15,6 @@
 <a target="_blank" href="https://twitter.com/intent/tweet?text=Learn Kubernetes in 30 mins, with single node cluster @sehgal_rohit. https://github.com/r0hi7/k8s-In-30Mins" title="Share on Twitter"><img src="https://img.shields.io/twitter/url/http/shields.io.svg?style=social&label=Share%20on%20Twitter"></a>
 </p>
 
-[![HitCount](http://hits.dwyl.com/r0hi7/k8s-In-30Mins.svg)](http://hits.dwyl.com/r0hi7/k8s-In-30Mins)
-
 
 # K8s in 30 mins
 This is not a comprehensive guide to learn Kubernetes from scratch, rather this is just a small guide/cheat sheet to quickly setup and run applications with Kubernetes and deploy a very simple application on single workload VM. This repo can be served as quick learning manual to understand Kubernetes.
