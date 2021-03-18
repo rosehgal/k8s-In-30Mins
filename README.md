@@ -9,10 +9,10 @@
 <br>
 <img alt="GitHub issues" src="https://img.shields.io/github/issues-raw/r0hi7/k8s-In-30Mins">
 <img alt="GitHub stars" src="https://img.shields.io/github/stars/r0hi7/k8s-In-30Mins">
-<img alt="Twitter Follow" src="https://img.shields.io/twitter/follow/sehgal_rohit?style=social">
+<img alt="Twitter Follow" src="https://img.shields.io/twitter/follow/sec_r0?style=social">
 <img alt="GitHub followers" src="https://img.shields.io/github/followers/r0hi7?style=social">
 <br>
-<a target="_blank" href="https://twitter.com/intent/tweet?text=Learn Kubernetes in 30 mins, with single node cluster @sehgal_rohit. https://github.com/r0hi7/k8s-In-30Mins" title="Share on Twitter"><img src="https://img.shields.io/twitter/url/http/shields.io.svg?style=social&label=Share%20on%20Twitter"></a>
+<a target="_blank" href="https://twitter.com/intent/tweet?text=Learn Kubernetes in 30 mins, with single node cluster @sec_r0. https://github.com/r0hi7/k8s-In-30Mins" title="Share on Twitter"><img src="https://img.shields.io/twitter/url/http/shields.io.svg?style=social&label=Share%20on%20Twitter"></a>
 </p>
 
 
